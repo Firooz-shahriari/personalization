@@ -4,107 +4,30 @@ import copy as cp
 
 from numpy import linalg as LA
 import numpy as np
-import tensorly
 from tqdm import tqdm
 
 from utils.utils import *
 
 
-def GP(prd, B, learning_rate, K, theta_0):
+def PushPull(pr, R, C, learning_rate, K, theta_0):
     theta = [cp.deepcopy(theta_0)]
-    grad = prd.networkgrad(theta[-1])
-    Y = np.ones(B.shape[1])
-    for k in range(K):
-        theta.append(np.matmul(B, theta[-1]) - learning_rate * grad)
-        Y = np.matmul(B, Y)
-        YY = np.diag(Y)
-        z = np.matmul(LA.inv(YY), theta[-1])
-        grad = prd.networkgrad(z)
-        ut.monitor("GP", k, K)
-    return theta
-
-
-def ADDOPT(prd, B1, B2, learning_rate, K, theta_0):
-    theta = [cp.deepcopy(theta_0)]
-    grad = prd.networkgrad(theta[-1])
-    tracker = cp.deepcopy(grad)
-    Y = np.ones(B1.shape[1])
-    for k in range(K):
-        theta.append(np.matmul(B1, theta[-1]) - learning_rate * tracker)
-        grad_last = cp.deepcopy(grad)
-        Y = np.matmul(B1, Y)
-        YY = np.diag(Y)
-        z = np.matmul(LA.inv(YY), theta[-1])
-        grad = prd.networkgrad(z)
-        tracker = np.matmul(B2, tracker) + grad - grad_last
-        ut.monitor("ADDOPT", k, K)
-    return theta
-
-
-def SGP(prd, B, learning_rate, K, theta_0):
-    theta = cp.deepcopy(theta_0)
-    theta_epoch = [cp.deepcopy(theta)]
-    sample_vec = np.array([np.random.choice(prd.data_distr[i]) for i in range(prd.n)])
-    grad = prd.networkgrad(theta, sample_vec)
-    Y = np.ones(B.shape[1])
-    for k in range(K):
-        theta = np.matmul(B, theta) - learning_rate * grad
-        Y = np.matmul(B, Y)
-        YY = np.diag(Y)
-        z = np.matmul(LA.inv(YY), theta)
-        sample_vec = np.array(
-            [np.random.choice(prd.data_distr[i]) for i in range(prd.n)]
-        )
-        grad = prd.networkgrad(z, sample_vec)
-        ut.monitor("SGP", k, K)
-        if (k + 1) % prd.b == 0:
-            theta_epoch.append(cp.deepcopy(theta))
-    return theta_epoch
-
-
-def SADDOPT(prd, B1, B2, learning_rate, K, theta_0):
-    theta = cp.deepcopy(theta_0)
-    theta_epoch = [cp.deepcopy(theta)]
-    sample_vec = np.array([np.random.choice(prd.data_distr[i]) for i in range(prd.n)])
-    grad = prd.networkgrad(theta, sample_vec)
-    tracker = cp.deepcopy(grad)
-    Y = np.ones(B1.shape[1])
-    for k in range(K):
-        theta = np.matmul(B1, theta) - learning_rate * tracker
-        grad_last = cp.deepcopy(grad)
-        Y = np.matmul(B1, Y)
-        YY = np.diag(Y)
-        z = np.matmul(LA.inv(YY), theta)
-        sample_vec = np.array(
-            [np.random.choice(prd.data_distr[i]) for i in range(prd.n)]
-        )
-        grad = prd.networkgrad(z, sample_vec)
-        tracker = np.matmul(B2, tracker) + grad - grad_last
-        ut.monitor("SADDOPT", k, K)
-        if (k + 1) % prd.b == 0:
-            theta_epoch.append(cp.deepcopy(theta))
-    return theta_epoch
-
-
-def PushPull(prd, R, C, learning_rate, K, theta_0):
-    theta = [cp.deepcopy(theta_0)]
-    g = prd.networkgrad(theta[-1])
+    g = pr.networkgrad(theta[-1])
     last_g = np.copy(g)
     y = np.copy(g)
     for k in range(K):
         theta.append(np.matmul(R, theta[-1] - learning_rate * y))
         last_g = g
-        g = prd.networkgrad(theta[-1])
+        g = pr.networkgrad(theta[-1])
         y = np.matmul(C, y) + g - last_g
         ut.monitor("PushPull", k, K)
     return theta
 
 
-def DAGP(prd, W, Q, learning_rate, K, x0, rho, alpha, cons=True):
+def DAGP(pr, W, Q, learning_rate, K, x0, rho, alpha, cons=True):
     x = [cp.deepcopy(x0)]
     z = [cp.deepcopy(x0)]
 
-    f_grad = prd.networkgrad(x[-1])
+    f_grad = pr.networkgrad(x[-1])
     g = np.zeros(f_grad.shape)
     h = np.zeros(g.shape)
 
@@ -114,10 +37,10 @@ def DAGP(prd, W, Q, learning_rate, K, x0, rho, alpha, cons=True):
     for k in range(K):
         z.append(x[-1] - np.matmul(W, x[-1]) + learning_rate * (g - f_grad))
         if cons:
-            x.append(prd.network_projection(z[-1]))
+            x.append(pr.network_projection(z[-1]))
         else:
             x.append(z[-1])
-        local_grad = prd.networkgrad(x[-1])
+        local_grad = pr.networkgrad(x[-1])
         new_h = h - np.matmul(Q, h - g)
         g = g + rho * (f_grad - g + (z[-1] - x[-1]) / learning_rate) + alpha * (h - g)
         f_grad = local_grad
@@ -128,20 +51,103 @@ def DAGP(prd, W, Q, learning_rate, K, x0, rho, alpha, cons=True):
     return x, z, h_iterates, g_iterates
 
 
-def DDPS(prd, R, C, p, K, x0, eps):  # DDPS p: decaying power, eps: parameter
-    x = [cp.deepcopy(x0)]
-    z = [cp.deepcopy(x0)]
-    last_x = cp.deepcopy(x0)
+def dagp_modified_for_personalized(
+    pr, W, Q, learning_rate, K, x0, rho, alpha, cons=True
+):
+    pass
 
-    f_grad = prd.networkgrad(x[-1])
-    y = [cp.deepcopy(f_grad)]
 
-    for k in range(K):
-        alpha = (k + 1) ** (-p)
-        z.append(np.matmul(R, x[-1]) + eps * y[-1] - alpha * f_grad)
-        last_x = x[-1]
-        x.append(prd.network_projection(z[-1]))
-        y.append(last_x - np.matmul(R, last_x) + np.matmul(C, y[-1]) - eps * y[-1])
-        f_grad = prd.networkgrad(x[-1])
-        ut.monitor("DDPS", k, K)
-    return x
+def p_dagp(pr, graph):
+    x0_locals = np.random.randn(config.graph.num_nodes, pr.local_dim)
+    x0_globals = np.random.randn(graph.num_nodes, pr.global_dim)
+
+    x_locals = [cp.deepcopy(x0_locals)]
+    x_globals = [cp.deepcopy(x0_globals)]
+
+    f_grad_locals = pr.networkgrad(x_locals[-1])
+    f_grad_global = pr.network_globalgrad(x_globals[-1])
+
+    g_globals = np.zeros(f_grad_global.shape)
+    h_globals = np.zeros(g_globals.shape)
+
+    h_global_iters = [cp.deepcopy(h_globals)]
+    g_global_iters = [cp.deepcopy(g_globals)]
+    f_values = [pr.F_val(x_locals[-1], x_globals[-1])]
+
+    bar = tqdm(total=config.p_dagp.max_iter, leave=False)
+
+    for k in range(config.p_dagp.max_iter):
+        z_locals, z_globals = update_z(
+            x_locals[-1],
+            x_globals[-1],
+            g_global_iters[-1],
+            graph,
+            config.p_dagp.lr,
+            f_grad_locals,
+            f_grad_global,
+        )
+
+        x_locals_tmp, x_globals_tmp = project_z(
+            z_locals, z_globals, pr.map_mat, pr.epsilon
+        )
+        x_locals.append(cp.deepcopy(x_locals_tmp))
+        x_globals.append(cp.deepcopy(x_globals_tmp))
+
+        h_globals_new = h_globals - np.matmul(graph.zero_col_sum, h_globals - g_globals)
+        g_globals = (
+            g_globals
+            + config.p_dagp.rho
+            * (
+                f_grad_global
+                - g_globals
+                + (z_globals - x_globals_tmp) / config.p_dagp.lr
+            )
+            + config.p_dagp.alpha * (h_globals - g_globals)
+        )
+
+        f_grad_locals = pr.networkgrad(x_locals[-1])
+        f_grad_global = pr.network_globalgrad(x_globals[-1])
+        h_globals = h_globals_new
+
+        bar.set_postfix({"objective_val": pr.F_val(x_locals[-1], x_globals[-1])})
+        bar.update()
+        h_global_iters.append(cp.deepcopy(h_globals))
+        g_global_iters.append(cp.deepcopy(g_globals))
+        f_values.append(pr.F_val(x_locals[-1], x_globals[-1]))
+
+    return (
+        x_locals,
+        x_globals,
+        h_global_iters,
+        g_global_iters,
+    )
+
+
+def update_z(
+    x_locals, x_globals, g_globals, graph, learning_rate, f_grad_locals, f_grad_globals
+):
+    z_locals = x_locals - config.p_dagp.lr * f_grad_locals
+
+    if config.pr.global_objective_exists:
+        z_globals = (
+            x_globals
+            - np.matmul(graph.zero_row_sum, x_globals)
+            + config.p_dagp.lr * (g_globals - f_grad_globals)
+        )
+    else:
+        z_globals = (
+            x_globals
+            - np.matmul(graph.zero_row_sum, x_globals)
+            + config.p_dagp.lr * g_globals
+        )
+    return z_locals, z_globals
+
+
+def project_z(x_locals, x_globals, map_mat, epsilon):
+    glob_tmp = cp.deepcopy(x_globals)
+    local_tmp = cp.deepcopy(x_locals)
+    for node in range(config.graph.num_nodes):
+        local_tmp[node], glob_tmp[node] = project_onto_quadratic_set(
+            x_locals[node], x_globals[node], map_mat, epsilon
+        )
+    return local_tmp, glob_tmp

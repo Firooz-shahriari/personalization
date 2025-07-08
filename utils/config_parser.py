@@ -15,7 +15,7 @@ class Config:
         self.pr = ProblemConfig(self.config["problem"])
 
         # Load optimizer configurations
-        # self.p_dagp = p_dagp_OptimizerConfig(self.config["optimizer"]["p_dagp"])
+        self.p_dagp = p_dagp_OptimizerConfig(self.config["optimizer"]["p_dagp"])
         self.pcgd = pcgd_OptimizerConfig(self.config["optimizer"]["pcgd"])
 
     @staticmethod
@@ -36,7 +36,7 @@ class GraphConfig:
 
 class ProblemConfig:
     def __init__(self, config):
-        self.local_dimension = config["synthetic"]["local_dimension"]
+        self.local_dim = config["synthetic"]["local_dimension"]
         self.global_dim = config["synthetic"]["global_dimension"]
         self.epsilon = config["synthetic"]["epsilon"]
         self.global_objective_exists = config["synthetic"]["global_objective_exists"]

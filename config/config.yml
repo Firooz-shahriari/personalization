@@ -9,7 +9,7 @@ seed: 42  # Random seed for reproducibility
 graph:
   type: "random"  # Options: "random", "grid", "star"
   directed: True  # Whether the graph is directed or undirected
-  num_nodes: 10  # Number of nodes in the graph
+  num_nodes: 15  # Number of nodes in the graph
   edge_prob: 1.  # Probability of edge creation between nodes
   laplacian_factor: 2.0  # Factor for Laplacian matrix scaling
 
@@ -19,7 +19,7 @@ problem:
   synthetic:
     local_dimension: 10  # dimension of local variables
     global_dimension: 10  # dimension of global variables
-    epsilon: 0.0001  # Epsilon value of constraints
+    epsilon: 0.01  # Epsilon value of constraints
     global_objective_exists: True  # Whether the global objective exists
   # logistic_regression:
   #   limited_labels: 10  # Number of labels for Logistic Regression
@@ -31,16 +31,16 @@ problem:
 # optimizer configuration
 optimizer:
   p_dagp:
-    max_iter: 1000  # Maximum number of iterations for personalized dagp
+    max_iter: 8000  # Maximum number of iterations for personalized dagp
     alpha: 0.1  # Alpha parameter for personalized dagp
-    rho: 0.5  # Rho parameter for personalized dagp
+    rho: 0.1  # Rho parameter for personalized dagp
     learning_rate:
       initial: 0.01  # Initial learning rate
       min: 0.00001    # Minimum learning rate
       decay_rate: 1.  # Decay rate for learning rate scheduling
       decay_steps: 100   # Number of steps between learning rate updates
   pcgd:
-    max_iter: 30  # Maximum number of iterations for cdd
+    max_iter: 4000  # Maximum number of iterations for cdd
     projection_iters: 5  # Number of projection iterations  
     learning_rate:
       initial: 0.05  # Initial learning rate

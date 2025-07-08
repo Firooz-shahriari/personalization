@@ -74,15 +74,15 @@ def log_results(config, save_path, terminal=False):
     return LOGGER
 
 
-def project_onto_quadratic_set(z1, z2, A, epsilon, tol=1e-6):
+def project_onto_quadratic_set(z1, z2, map_mat, epsilon, tol=1e-6):
     """
     Projects the point (z1, z2) onto the quadratic set defined by:
-        { (x1, x2) | ||x1 - A x2||_2^2 <= epsilon }
+        { (x1, x2) | ||x1 - map_mat x2||_2^2 <= epsilon }
 
     Parameters:
         z1 (ndarray): Vector in R^n.
         z2 (ndarray): Vector in R^m.
-        A (ndarray): Matrix of size (n x m).
+        map_mat (ndarray): Matrix of size (n x m).
         epsilon (float): Scalar defining the radius of the quadratic set.
         tol (float, optional): Tolerance for convergence. Default is 1e-6.
 
@@ -92,7 +92,7 @@ def project_onto_quadratic_set(z1, z2, A, epsilon, tol=1e-6):
     """
 
     # Check feasibility: If the point is already in the set, return it directly
-    residual = np.linalg.norm(z1 - A @ z2)
+    residual = np.linalg.norm(z1 - map_mat @ z2)
     if residual <= epsilon:
         return z1, z2
 
@@ -101,9 +101,9 @@ def project_onto_quadratic_set(z1, z2, A, epsilon, tol=1e-6):
 
     # Find an upper bound λ_max where the residual is less than epsilon
     while True:
-        x2_trial = compute_x2(z1, z2, A, λ_max)
-        x1_trial = compute_x1(z1, A, x2_trial, λ_max)
-        if np.linalg.norm(x1_trial - A @ x2_trial) <= epsilon:
+        x2_trial = compute_x2(z1, z2, map_mat, λ_max)
+        x1_trial = compute_x1(z1, map_mat, x2_trial, λ_max)
+        if np.linalg.norm(x1_trial - map_mat @ x2_trial) <= epsilon:
             break
         λ_max *= 2
 
@@ -114,9 +114,9 @@ def project_onto_quadratic_set(z1, z2, A, epsilon, tol=1e-6):
         λ_mid = (λ_min + λ_max) / 2
 
         # Compute intermediate projection for given λ_mid
-        x2_mid = compute_x2(z1, z2, A, λ_mid)
-        x1_mid = compute_x1(z1, A, x2_mid, λ_mid)
-        residual_mid = np.linalg.norm(x1_mid - A @ x2_mid)
+        x2_mid = compute_x2(z1, z2, map_mat, λ_mid)
+        x1_mid = compute_x1(z1, map_mat, x2_mid, λ_mid)
+        residual_mid = np.linalg.norm(x1_mid - map_mat @ x2_mid)
 
         # Update λ bounds based on residual
         if residual_mid > epsilon:
@@ -131,7 +131,7 @@ def project_onto_quadratic_set(z1, z2, A, epsilon, tol=1e-6):
     return x1_mid, x2_mid
 
 
-def compute_x2(z1, z2, A, λ):
+def compute_x2(z1, z2, map_mat, λ):
     """
     Computes x2(λ) based on the optimality conditions.
     """
@@ -139,19 +139,19 @@ def compute_x2(z1, z2, A, λ):
     m = z2.shape[0]
     identity_m = np.eye(m)
 
-    matrix = identity_m + (λ / (1 + λ)) * (A.T @ A)
-    rhs = z2 + (λ / (1 + λ)) * (A.T @ z1)
+    matrix = identity_m + (λ / (1 + λ)) * (map_mat.T @ map_mat)
+    rhs = z2 + (λ / (1 + λ)) * (map_mat.T @ z1)
     x2 = np.linalg.solve(matrix, rhs)
 
     return x2
 
 
-def compute_x1(z1, A, x2, λ):
+def compute_x1(z1, map_mat, x2, λ):
     """
     Computes x1(λ) based on the optimality conditions.
     """
 
-    return (z1 + λ * (A @ x2)) / (1 + λ)
+    return (z1 + λ * (map_mat @ x2)) / (1 + λ)
 
 
 def equidistant_point(X):

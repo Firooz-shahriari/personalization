@@ -25,13 +25,22 @@ def pcgd(pr):
 
     theta_locals = [np.random.randn(pr.num_nodes, pr.local_dim)]
     theta_global = [np.random.randn(pr.global_dim)]
-    f_values = [pr.F_val(theta_locals[-1])]
+
+    if config.pr.global_objective_exists:
+        f_values = [pr.F_val(theta_locals[-1], theta_global[-1])]
+    else:
+        f_values = [pr.F_val(theta_locals[-1])]
 
     bar = tqdm(total=config.pcgd.max_iter, leave=False)
 
     for itr in range(config.pcgd.max_iter):
         theta_locals_tmp = theta_locals[-1] - config.pcgd.lr * pr.grad(theta_locals[-1])
-        theta_global_tmp = theta_global[-1]
+        if config.pr.global_objective_exists:
+            theta_global_tmp = theta_global[-1] - config.pcgd.lr * pr.globalgrad(
+                theta_global[-1]
+            )
+        else:
+            theta_global_tmp = theta_global[-1]
         for _ in range(config.pcgd.projection_iters):
             for idx in range(pr.num_nodes):
                 theta_locals_tmp[idx], theta_global_tmp = project_onto_quadratic_set(
@@ -40,21 +49,14 @@ def pcgd(pr):
 
         theta_locals.append(cp.copy(theta_locals_tmp))
         theta_global.append(cp.copy(theta_global_tmp))
-        f_values.append(pr.F_val(theta_locals[-1]))
+
+        if config.pr.global_objective_exists:
+            f_values.append(pr.F_val(theta_locals[-1], theta_global[-1]))
+        else:
+            f_values.append(pr.F_val(theta_locals[-1]))
 
         results = {"objective_val": f_values[-1]}
         bar.set_postfix(results)
         bar.update()
 
-    theta_locals_pcgd = theta_locals[-1]
-    theta_global_pcgd = theta_global[-1]
-    F_cgd = pr.F_val(theta_locals[-1])
-
-    return (
-        theta_locals,
-        theta_global,
-        f_values,
-        theta_locals_pcgd,
-        theta_global_pcgd,
-        F_cgd,
-    )
+    return theta_locals, theta_global, f_values

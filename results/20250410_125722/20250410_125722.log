@@ -1,0 +1,22 @@
+2025-04-10 12:58:25,546 - Reproducibility: True
+2025-04-10 12:58:25,547 - Seed: 42
+2025-04-10 12:58:25,547 - Graph: 10 nodes
+2025-04-10 12:58:25,547 - Graph: 1.0 edge probability
+2025-04-10 12:58:25,547 - Graph: is it directed: True
+2025-04-10 12:58:25,547 - Graph: 2.0 laplacian factor
+2025-04-10 12:58:25,547 - 
+
+2025-04-10 12:58:25,548 - Problem: 10 local dimension
+2025-04-10 12:58:25,548 - Problem: 10 global dimension
+2025-04-10 12:58:25,548 - Problem: 0.0001 epsilon
+2025-04-10 12:58:25,567 - 
+
+2025-04-10 12:58:25,567 - Optimizer: 4000 max iter
+2025-04-10 12:58:25,567 - Optimizer: 0.05 learning rate
+2025-04-10 12:58:25,567 - Optimizer: 1e-05 min learning rate
+2025-04-10 12:58:25,567 - Optimizer: 1.0 decay rate
+2025-04-10 12:58:25,567 - Optimizer: 100 decay steps
+2025-04-10 12:58:25,567 - Optimizer: 5 projection iterations
+2025-04-10 12:58:25,567 - 
+
+2025-04-10 12:58:25,567 - Result path: ./results//20250410_125722/
